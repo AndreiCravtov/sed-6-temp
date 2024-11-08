@@ -79,9 +79,36 @@ public class CachingForecasterProxy implements Forecaster {
 
   @Override
   public Forecast forecastFor(Region region, Day day) {
-    return forecaster.forecastFor(region, day);
+    // check if query is in cache
+    ForecastQuery forecastQuery = new ForecastQuery(region, day);
+    Forecast forecast = cache.get(forecastQuery);
+
+    // if it is a cache hit, return early
+    if (forecast != null) {
+      return forecast;
+    }
+
+    // if it is a cache miss, call the internal forecast service
+    forecast = forecaster.forecastFor(region, day);
+
+    // if the cache size is limited, and that limit has already been reached,
+    // evict an old entry to make space for the new one
+    if (maxCacheSize != NO_MAX_CACHE_SIZE && cache.size() == maxCacheSize) {
+      evictOldEntry();
+    }
+
+    // add the new entry to the cache and return the result
+    cache.put(forecastQuery, forecast);
+    return forecast;
+  }
+
+  private void evictOldEntry() {
+    // this will do the job for now, but is incredibly crude
+    ForecastQuery oldQuery = cache.keySet().stream().toList().getFirst();
+    Forecast oldResponse = cache.remove(oldQuery);
   }
 
   private record ForecastQuery(Region region, Day day) {
+
   }
 }
