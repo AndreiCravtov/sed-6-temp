@@ -2,6 +2,12 @@ package ic.doc.util;
 
 import java.util.Objects;
 
+/**
+ *
+ * @param <T>
+ * @param <U>
+ * @param <F>
+ */
 @FunctionalInterface
 public interface TriConsumer<T, U, F> {
 

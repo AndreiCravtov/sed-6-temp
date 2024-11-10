@@ -30,46 +30,103 @@ public class ForecastTestUtils {
   private static final int MAX_TEMPERATURE = 60;
 
   // exposed helper methods
+
+  /**
+   *
+   * @param items
+   * @return
+   * @param <T>
+   */
   static <T> T chooseRandomItem(T[] items) {
     return items[new Random().nextInt(items.length)];
   }
 
+  /**
+   *
+   * @param size
+   * @param factory
+   * @return
+   * @param <T>
+   */
   static <T> List<T> makeItemList(int size, Function<Integer, T> factory) {
     return IntStream.range(0, size).mapToObj(factory::apply).toList();
   }
 
+  /**
+   *
+   * @return
+   */
   static Region randomRegion() {
     return chooseRandomItem(REGIONS);
   }
 
+  /**
+   *
+   * @param amount
+   * @return
+   */
   static List<Region> randomRegions(int amount) {
     return makeItemList(amount, i -> randomRegion());
   }
 
+  /**
+   *
+   * @return
+   */
   static Day randomDay() {
     return chooseRandomItem(DAYS);
   }
 
+  /**
+   *
+   * @param amount
+   * @return
+   */
   static List<Day> randomDays(int amount) {
     return makeItemList(amount, i -> randomDay());
   }
 
+  /**
+   *
+   * @return
+   */
   static String randomSummary() {
     return RandomString.make(new Random().nextInt(MIN_STRING_LENGTH, MAX_STRING_LENGTH));
   }
 
+  /**
+   *
+   * @param amount
+   * @return
+   */
   static List<String> randomSummaries(int amount) {
     return makeItemList(amount, i -> randomSummary());
   }
 
+  /**
+   *
+   * @return
+   */
   static int randomTemperature() {
     return new Random().nextInt(MIN_TEMPERATURE, MAX_TEMPERATURE);
   }
 
+  /**
+   *
+   * @param amount
+   * @return
+   */
   static List<Integer> randomTemperatures(int amount) {
     return makeItemList(amount, i -> randomTemperature());
   }
 
+  /**
+   *
+   * @param target
+   * @param inspector
+   * @return
+   * @param <T>
+   */
   @SuppressWarnings("unchecked")
   static <T> T inspect(final T target, TriConsumer<Method, Object[], Optional<Object>> inspector) {
     // perform null check on object

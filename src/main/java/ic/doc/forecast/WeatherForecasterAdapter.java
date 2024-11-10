@@ -1,5 +1,8 @@
 package ic.doc.forecast;
 
+/**
+ *
+ */
 public final class WeatherForecasterAdapter implements Forecaster {
 
   private final com.weather.Forecaster weatherForecaster;
@@ -8,15 +11,31 @@ public final class WeatherForecasterAdapter implements Forecaster {
     this.weatherForecaster = weatherForecaster;
   }
 
+  /**
+   *
+   * @param weatherForecaster
+   * @return
+   */
   public static Forecaster adapt(com.weather.Forecaster weatherForecaster) {
     return new WeatherForecasterAdapter(weatherForecaster);
   }
 
+  /**
+   *
+   * @param region
+   * @param day
+   * @return
+   */
   @Override
   public Forecast forecastFor(Region region, Day day) {
     return adaptForecast(weatherForecaster.forecastFor(adaptRegion(region), adaptDay(day)));
   }
 
+  /**
+   *
+   * @param region
+   * @return
+   */
   private com.weather.Region adaptRegion(Region region) {
     return switch (region) {
       case BIRMINGHAM -> com.weather.Region.BIRMINGHAM;
@@ -31,6 +50,11 @@ public final class WeatherForecasterAdapter implements Forecaster {
     };
   }
 
+  /**
+   *
+   * @param day
+   * @return
+   */
   private com.weather.Day adaptDay(Day day) {
     return switch (day) {
       case MONDAY -> com.weather.Day.MONDAY;
@@ -43,6 +67,11 @@ public final class WeatherForecasterAdapter implements Forecaster {
     };
   }
 
+  /**
+   *
+   * @param forecast
+   * @return
+   */
   private Forecast adaptForecast(com.weather.Forecast forecast) {
     return new Forecast(forecast.summary(), forecast.temperature());
   }

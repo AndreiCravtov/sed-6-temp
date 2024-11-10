@@ -97,6 +97,12 @@ public class WeatherForecasterAdapterTest {
     }
   }
 
+  /**
+   *
+   * @param forecaster
+   * @param inspector
+   * @return
+   */
   private static com.weather.Forecaster inspectWeatherForecaster(com.weather.Forecaster forecaster,
       BiConsumer<Pair<com.weather.Region, com.weather.Day>, com.weather.Forecast> inspector) {
     return inspect(forecaster, (m, a, r) -> {

@@ -1,5 +1,8 @@
 package ic.doc.forecast;
 
+/**
+ *
+ */
 public enum Region {
   BIRMINGHAM, EDINBURGH, GLASGOW,
   LONDON, MANCHESTER, NORTH_ENGLAND,

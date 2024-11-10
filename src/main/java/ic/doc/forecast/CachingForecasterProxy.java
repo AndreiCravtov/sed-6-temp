@@ -2,6 +2,9 @@ package ic.doc.forecast;
 
 import java.util.HashMap;
 
+/**
+ *
+ */
 public class CachingForecasterProxy implements Forecaster {
 
   private static final int NO_MAX_CACHE_SIZE = 0;
@@ -77,6 +80,12 @@ public class CachingForecasterProxy implements Forecaster {
     return new CachingForecasterProxy(forecaster);
   }
 
+  /**
+   *
+   * @param region
+   * @param day
+   * @return
+   */
   @Override
   public Forecast forecastFor(Region region, Day day) {
     // check if query is in cache
@@ -102,12 +111,20 @@ public class CachingForecasterProxy implements Forecaster {
     return forecast;
   }
 
+  /**
+   *
+   */
   private void evictOldEntry() {
     // this will do the job for now, but is incredibly crude
     ForecastQuery oldQuery = cache.keySet().stream().toList().getFirst();
     Forecast oldResponse = cache.remove(oldQuery);
   }
 
+  /**
+   *
+   * @param region
+   * @param day
+   */
   private record ForecastQuery(Region region, Day day) {
 
   }
