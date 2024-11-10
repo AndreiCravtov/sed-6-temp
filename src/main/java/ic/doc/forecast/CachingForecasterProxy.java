@@ -1,6 +1,12 @@
 package ic.doc.forecast;
 
+import ic.doc.util.Pair;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map.Entry;
 
 /**
  *
@@ -8,10 +14,12 @@ import java.util.HashMap;
 public class CachingForecasterProxy implements Forecaster {
 
   private static final int NO_MAX_CACHE_SIZE = 0;
+  private static final Duration ONE_HOUR = Duration.ofHours(1);
 
   private final Forecaster forecaster;
   private final int maxCacheSize;
-  private final HashMap<ForecastQuery, Forecast> cache;
+  private final HashMap<Pair<Region, Day>, Pair<Forecast, Instant>> cache;
+  private final Deque<Pair<Pair<Region, Day>, Instant>> cacheEvictionQueue = new LinkedList<>();
 
   /**
    * Constructs a caching {@link Forecaster} proxy with a cache of limited size. Old entries are
@@ -81,7 +89,6 @@ public class CachingForecasterProxy implements Forecaster {
   }
 
   /**
-   *
    * @param region
    * @param day
    * @return
@@ -89,43 +96,54 @@ public class CachingForecasterProxy implements Forecaster {
   @Override
   public Forecast forecastFor(Region region, Day day) {
     // check if query is in cache
-    ForecastQuery forecastQuery = new ForecastQuery(region, day);
-    Forecast forecast = cache.get(forecastQuery);
+    Forecast forecast = hitCache(region, day);
 
     // if it is a cache hit, return early
     if (forecast != null) {
       return forecast;
     }
 
-    // if it is a cache miss, call the internal forecast service
+    // if it is a cache miss, call the internal forecast service,
+    // and record the time at which it completes
     forecast = forecaster.forecastFor(region, day);
+    Instant timestamp = Instant.now();
 
     // if the cache size is limited, and that limit has already been reached,
     // evict an old entry to make space for the new one
     if (maxCacheSize != NO_MAX_CACHE_SIZE && cache.size() == maxCacheSize) {
-      evictOldEntry();
+      cache.remove(cacheEvictionQueue.removeFirst());
     }
 
     // add the new entry to the cache and return the result
-    cache.put(forecastQuery, forecast);
+    cache.put(Pair.of(region, day), Pair.of(forecast, timestamp));
+    cacheEvictionQueue.addLast(Pair.of(Pair.of(region, day), timestamp));
     return forecast;
   }
 
   /**
-   *
-   */
-  private void evictOldEntry() {
-    // this will do the job for now, but is incredibly crude
-    ForecastQuery oldQuery = cache.keySet().stream().toList().getFirst();
-    Forecast oldResponse = cache.remove(oldQuery);
-  }
-
-  /**
-   *
    * @param region
    * @param day
+   * @return
    */
-  private record ForecastQuery(Region region, Day day) {
+  private Forecast hitCache(Region region, Day day) {
+    Pair<Region, Day> forecastQuery = Pair.of(region, day);
+    Pair<Forecast, Instant> forecastEntry = cache.get(forecastQuery);
 
+    // if it is a cache miss, return early
+    if (forecastEntry == null) {
+      return null;
+    }
+
+    // if the entry is old, then trigger cleanup and return early
+    if (forecastEntry.second().plus(ONE_HOUR).isBefore(Instant.now())) {
+      while (!cacheEvictionQueue.isEmpty() && cacheEvictionQueue.peekFirst()
+          .second().plus(ONE_HOUR).isBefore(Instant.now())) {
+        cacheEvictionQueue.removeFirst();
+      }
+      return null;
+    }
+
+    // the cached entry is still fresh, so return it
+    return forecastEntry.first();
   }
 }

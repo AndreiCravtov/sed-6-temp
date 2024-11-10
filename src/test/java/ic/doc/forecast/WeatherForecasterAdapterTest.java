@@ -1,37 +1,36 @@
 package ic.doc.forecast;
 
+import static ic.doc.forecast.WeatherForecasterAdapter.adapt;
+
+import static ic.doc.TestUtils.makeItemList;
 import static ic.doc.forecast.ForecastTestUtils.DAYS;
 import static ic.doc.forecast.ForecastTestUtils.REGIONS;
-import static ic.doc.forecast.ForecastTestUtils.inspect;
-import static ic.doc.forecast.ForecastTestUtils.makeItemList;
 import static ic.doc.forecast.ForecastTestUtils.randomDay;
 import static ic.doc.forecast.ForecastTestUtils.randomDays;
 import static ic.doc.forecast.ForecastTestUtils.randomRegion;
 import static ic.doc.forecast.ForecastTestUtils.randomRegions;
 import static ic.doc.forecast.ForecastTestUtils.randomSummaries;
 import static ic.doc.forecast.ForecastTestUtils.randomTemperatures;
-import static ic.doc.forecast.WeatherForecasterAdapter.adapt;
+import static ic.doc.forecast.ForecastTestUtils.inspectWeatherForecaster;
 
-import static org.jmock.AbstractExpectations.any;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.jmock.AbstractExpectations.any;
 
-import ic.doc.util.Pair;
 import ic.doc.util.Triple;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.List;
+import java.util.HashMap;
+import java.util.ArrayList;
 
-import org.hamcrest.Matcher;
-import org.jmock.Expectations;
-import org.jmock.Sequence;
-import org.jmock.imposters.ByteBuddyClassImposteriser;
-import org.jmock.junit5.JUnit5Mockery;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.jmock.Sequence;
+import org.hamcrest.Matcher;
+import org.junit.BeforeClass;
+import org.jmock.Expectations;
+import org.jmock.junit5.JUnit5Mockery;
+import org.jmock.imposters.ByteBuddyClassImposteriser;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class WeatherForecasterAdapterTest {
@@ -95,39 +94,6 @@ public class WeatherForecasterAdapterTest {
     for (Day day : DAYS) {
       assertTrue(WEATHER_DAY.containsKey(day));
     }
-  }
-
-  /**
-   *
-   * @param forecaster
-   * @param inspector
-   * @return
-   */
-  private static com.weather.Forecaster inspectWeatherForecaster(com.weather.Forecaster forecaster,
-      BiConsumer<Pair<com.weather.Region, com.weather.Day>, com.weather.Forecast> inspector) {
-    return inspect(forecaster, (m, a, r) -> {
-      try {
-        // ignore methods we are not interested in inspecting
-        if (!m.equals(
-            com.weather.Forecaster.class.getMethod("forecastFor", com.weather.Region.class,
-                com.weather.Day.class))) {
-          return;
-        }
-
-        // type-check the arguments and returned value at runtime
-        if (a.length != 2 || a[0].getClass() != com.weather.Region.class
-            || a[1].getClass() != com.weather.Day.class || r.isEmpty()
-            || r.get().getClass() != com.weather.Forecast.class) {
-          throw new IllegalArgumentException("Invalid 'forecastFor' method interceptor detected");
-        }
-
-        // coerce the types and call supplied inspector
-        inspector.accept(Pair.of((com.weather.Region) a[0], (com.weather.Day) a[1]),
-            (com.weather.Forecast) r.get());
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    });
   }
 
   @Test
