@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map.Entry;
 
 /**
- *
+ * A proxy around {@link Forecaster} objects which caches responses for an hour, after which they
+ * will be evicted from the cache. An optional cache size limit can be supplied.
  */
 public class CachingForecasterProxy implements Forecaster {
 
@@ -88,13 +88,15 @@ public class CachingForecasterProxy implements Forecaster {
     return new CachingForecasterProxy(forecaster);
   }
 
-  /**
-   * @param region
-   * @param day
-   * @return
-   */
   @Override
   public Forecast forecastFor(Region region, Day day) {
+    if (region == null) {
+      throw new NullPointerException("region cannot be null");
+    }
+    if (day == null) {
+      throw new NullPointerException("day cannot be null");
+    }
+
     // check if query is in cache
     Forecast forecast = hitCache(region, day);
 
@@ -121,9 +123,12 @@ public class CachingForecasterProxy implements Forecaster {
   }
 
   /**
-   * @param region
-   * @param day
-   * @return
+   * Checks the cache for a {@link Forecast} associated with a given {@link Region} and {@link Day},
+   * and returns it if found and not older than an hour. Otherwise, returns null.
+   *
+   * @param region the given {@link Region}
+   * @param day    the given {@link Day}
+   * @return the cached {@link Forecast}, or null if not found or older than one hour
    */
   private Forecast hitCache(Region region, Day day) {
     Pair<Region, Day> forecastQuery = Pair.of(region, day);
@@ -136,8 +141,8 @@ public class CachingForecasterProxy implements Forecaster {
 
     // if the entry is old, then trigger cleanup and return early
     if (forecastEntry.second().plus(ONE_HOUR).isBefore(Instant.now())) {
-      while (!cacheEvictionQueue.isEmpty() && cacheEvictionQueue.peekFirst()
-          .second().plus(ONE_HOUR).isBefore(Instant.now())) {
+      while (!cacheEvictionQueue.isEmpty() && cacheEvictionQueue.peekFirst().second().plus(ONE_HOUR)
+          .isBefore(Instant.now())) {
         cacheEvictionQueue.removeFirst();
       }
       return null;
