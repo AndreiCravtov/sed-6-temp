@@ -32,7 +32,7 @@ public final class WeatherForecasterAdapter implements Forecaster {
   }
 
   /**
-   * Converts a {@link Region} object to a {@link com.weather.Region} object
+   * Converts a {@link Region} object to a {@link com.weather.Region} object.
    *
    * @param region the {@link Region} object
    * @return the {@link com.weather.Region} object
@@ -57,7 +57,7 @@ public final class WeatherForecasterAdapter implements Forecaster {
   }
 
   /**
-   * Converts a {@link Day} object to a {@link com.weather.Day} object
+   * Converts a {@link Day} object to a {@link com.weather.Day} object.
    *
    * @param day the {@link Day} object
    * @return the {@link com.weather.Day} object
@@ -80,7 +80,7 @@ public final class WeatherForecasterAdapter implements Forecaster {
   }
 
   /**
-   * Converts a {@link com.weather.Forecast} object to a {@link Forecast} object
+   * Converts a {@link com.weather.Forecast} object to a {@link Forecast} object.
    *
    * @param forecast the {@link com.weather.Forecast} object
    * @return the {@link Forecast} object

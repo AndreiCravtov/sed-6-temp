@@ -3,6 +3,7 @@ package ic.doc.forecast;
 import ic.doc.util.Pair;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -11,7 +12,7 @@ import java.util.LinkedList;
  * A proxy around {@link Forecaster} objects which caches responses for an hour, after which they
  * will be evicted from the cache. An optional cache size limit can be supplied.
  */
-public class CachingForecasterProxy implements Forecaster {
+public final class CachingForecasterProxy implements Forecaster {
 
   private static final int NO_MAX_CACHE_SIZE = 0;
   private static final Duration ONE_HOUR = Duration.ofHours(1);
@@ -20,22 +21,23 @@ public class CachingForecasterProxy implements Forecaster {
   private final int maxCacheSize;
   private final HashMap<Pair<Region, Day>, Pair<Forecast, Instant>> cache;
   private final Deque<Pair<Pair<Region, Day>, Instant>> cacheEvictionQueue = new LinkedList<>();
+  private final InstantSource instantSource;
 
   /**
    * Constructs a caching {@link Forecaster} proxy with a cache of limited size. Old entries are
    * evicted if the cache size reaches that limit.
    *
-   * @param forecaster   the {@link Forecaster} object being proxied
-   * @param maxCacheSize the maximum cache size. Must be greater than zero
+   * @param forecaster    the {@link Forecaster} object being proxied
+   * @param maxCacheSize  the maximum cache size. Must be greater than zero
+   * @param instantSource optional {@link InstantSource} object to use for time-keeping operations
    * @throws NullPointerException     if {@code forecaster} is null
    * @throws IllegalArgumentException if {@code maxCacheSize} is less than zero
    */
-  public CachingForecasterProxy(Forecaster forecaster, int maxCacheSize) {
-
+  public CachingForecasterProxy(Forecaster forecaster, int maxCacheSize,
+      InstantSource instantSource) {
     if (forecaster == null) {
       throw new NullPointerException("Forecaster cannot be null");
     }
-
     if (maxCacheSize <= NO_MAX_CACHE_SIZE) {
       throw new IllegalArgumentException("Cache size must be greater than zero");
     }
@@ -43,17 +45,18 @@ public class CachingForecasterProxy implements Forecaster {
     this.forecaster = forecaster;
     this.maxCacheSize = maxCacheSize;
     this.cache = new HashMap<>();
+    this.instantSource = instantSource == null ? InstantSource.system() : instantSource;
   }
 
   /**
    * Constructs a caching {@link Forecaster} proxy with a cache unlimited size. No old entry will
    * ever get evicted, so all repeated requests always hit the cache.
    *
-   * @param forecaster the {@link Forecaster} object being proxied
+   * @param forecaster    the {@link Forecaster} object being proxied
+   * @param instantSource optional {@link InstantSource} object to use for time-keeping operations
    * @throws NullPointerException if {@code forecaster} is null
    */
-  public CachingForecasterProxy(Forecaster forecaster) {
-
+  public CachingForecasterProxy(Forecaster forecaster, InstantSource instantSource) {
     if (forecaster == null) {
       throw new NullPointerException("Forecaster cannot be null");
     }
@@ -61,6 +64,22 @@ public class CachingForecasterProxy implements Forecaster {
     this.forecaster = forecaster;
     this.maxCacheSize = NO_MAX_CACHE_SIZE;
     this.cache = new HashMap<>();
+    this.instantSource = instantSource == null ? InstantSource.system() : instantSource;
+  }
+
+  /**
+   * Creates a caching {@link Forecaster} proxy with a cache of limited size. Old entries are
+   * evicted if the cache size reaches that limit.
+   *
+   * @param forecaster    the {@link Forecaster} object being proxied
+   * @param maxCacheSize  the maximum cache size. Must be greater than zero
+   * @param instantSource optional {@link InstantSource} object to use for time-keeping operations
+   * @throws NullPointerException     if {@code forecaster} is null
+   * @throws IllegalArgumentException if {@code maxCacheSize} is less than zero
+   */
+  public static Forecaster withLimitedCache(Forecaster forecaster, int maxCacheSize,
+      InstantSource instantSource) throws NullPointerException, IllegalArgumentException {
+    return new CachingForecasterProxy(forecaster, maxCacheSize, instantSource);
   }
 
   /**
@@ -74,7 +93,20 @@ public class CachingForecasterProxy implements Forecaster {
    */
   public static Forecaster withLimitedCache(Forecaster forecaster, int maxCacheSize)
       throws NullPointerException, IllegalArgumentException {
-    return new CachingForecasterProxy(forecaster, maxCacheSize);
+    return new CachingForecasterProxy(forecaster, maxCacheSize, null);
+  }
+
+  /**
+   * Creates a caching {@link Forecaster} proxy with a cache unlimited size. No old entry will ever
+   * get evicted, so all repeated requests always hit the cache.
+   *
+   * @param forecaster    the {@link Forecaster} object being proxied
+   * @param instantSource optional {@link InstantSource} object to use for time-keeping operations
+   * @throws NullPointerException if {@code forecaster} is null
+   */
+  public static Forecaster withUnlimitedCache(Forecaster forecaster, InstantSource instantSource)
+      throws NullPointerException {
+    return new CachingForecasterProxy(forecaster, instantSource);
   }
 
   /**
@@ -85,7 +117,7 @@ public class CachingForecasterProxy implements Forecaster {
    * @throws NullPointerException if {@code forecaster} is null
    */
   public static Forecaster withUnlimitedCache(Forecaster forecaster) throws NullPointerException {
-    return new CachingForecasterProxy(forecaster);
+    return new CachingForecasterProxy(forecaster, null);
   }
 
   @Override
@@ -108,7 +140,7 @@ public class CachingForecasterProxy implements Forecaster {
     // if it is a cache miss, call the internal forecast service,
     // and record the time at which it completes
     forecast = forecaster.forecastFor(region, day);
-    Instant timestamp = Instant.now();
+    Instant timestamp = instantSource.instant();
 
     // if the cache size is limited, and that limit has already been reached,
     // evict an old entry to make space for the new one
@@ -140,9 +172,10 @@ public class CachingForecasterProxy implements Forecaster {
     }
 
     // if the entry is old, then trigger cleanup and return early
-    if (forecastEntry.second().plus(ONE_HOUR).isBefore(Instant.now())) {
+    Instant now = instantSource.instant();
+    if (forecastEntry.second().plus(ONE_HOUR).isBefore(now)) {
       while (!cacheEvictionQueue.isEmpty() && cacheEvictionQueue.peekFirst().second().plus(ONE_HOUR)
-          .isBefore(Instant.now())) {
+          .isBefore(now)) {
         cacheEvictionQueue.removeFirst();
       }
       return null;

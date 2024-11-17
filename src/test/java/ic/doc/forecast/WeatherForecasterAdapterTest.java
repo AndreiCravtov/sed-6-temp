@@ -157,6 +157,43 @@ public class WeatherForecasterAdapterTest {
   }
 
   @Test
+  public void nullObjectsAreNotAccepted() {
+    // don't accept null object on construction
+    try {
+      new WeatherForecasterAdapter(null);
+    } catch (NullPointerException e) {
+      assertEquals(e.getMessage(), "weatherForecaster cannot be null");
+    }
+
+    // don't accept null regions
+    try {
+      adapted.forecastFor(null, randomDay());
+    } catch (NullPointerException e) {
+      assertEquals(e.getMessage(), "region cannot be null");
+    }
+
+    // don't accept null regions
+    try {
+      adapted.forecastFor(null, randomDay());
+    } catch (NullPointerException e) {
+      assertEquals(e.getMessage(), "region cannot be null");
+    }
+
+    // don't accept null forecasts
+    context.checking(new Expectations() {{
+      oneOf(forecaster).forecastFor(
+          with(any(com.weather.Region.class)),
+          with(any(com.weather.Day.class)));
+      will(returnValue(null));
+    }});
+    try {
+      adapted.forecastFor(randomRegion(), randomDay());
+    } catch (NullPointerException e) {
+      assertEquals(e.getMessage(), "forecast cannot be null");
+    }
+  }
+
+  @Test
   public void correctlyIntegratesWithActualWeatherForecaster() {
     // create an adapted inspector, where the `forecastFor` method call to the inner object
     // is inspected at runtime, and logged to a list
